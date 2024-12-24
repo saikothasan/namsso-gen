@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/hooks/use-toast'
 import { motion } from 'framer-motion'
-import { CreditCard, Copy, Download, RefreshCw } from 'lucide-react'
+import { CreditCard, Copy, Download } from 'lucide-react'
 
 const CARD_TYPES = {
   visa: { prefix: '4', length: [13, 16] },
@@ -20,11 +20,12 @@ const CARD_TYPES = {
 }
 
 function luhnCheck(num: string) {
-  let arr = (num + '')
+  const arr = num
     .split('')
     .reverse()
-    .map(x => parseInt(x))
-  let sum = arr.reduce((acc, val, i) => (i % 2 !== 0 ? acc + val : acc + ((val * 2) % 9) || 9), 0)
+    .map((x) => parseInt(x, 10))
+  const sum = arr.reduce((acc, val, i) =>
+    i % 2 !== 0 ? acc + val : acc + ((val * 2) % 9) || 9, 0)
   return sum % 10 === 0
 }
 
@@ -57,7 +58,7 @@ function generateCardFromBIN(bin: string, length: number, withCVC: boolean, with
 function generateCard(type: keyof typeof CARD_TYPES, withCVC: boolean, withDate: boolean) {
   const cardInfo = CARD_TYPES[type]
   const length = cardInfo.length[Math.floor(Math.random() * cardInfo.length.length)]
-  let prefix = Array.isArray(cardInfo.prefix)
+  const prefix = Array.isArray(cardInfo.prefix)
     ? cardInfo.prefix[Math.floor(Math.random() * cardInfo.prefix.length)]
     : cardInfo.prefix
 
@@ -69,7 +70,7 @@ export default function CCGenerator() {
   const [cardType, setCardType] = useState<keyof typeof CARD_TYPES>('visa')
   const [bin, setBin] = useState('')
   const [quantity, setQuantity] = useState(10)
-  const [format, setFormat] = useState('CHECKER')
+  const [format, setFormat] = useState<'CHECKER' | 'CSV' | 'JSON' | 'XML'>('CHECKER')
   const [cvc, setCvc] = useState(false)
   const [date, setDate] = useState(false)
   const [generatedCards, setGeneratedCards] = useState<string[]>([])
@@ -77,7 +78,7 @@ export default function CCGenerator() {
   const generateCards = () => {
     const cards = Array.from({ length: quantity }, () => {
       if (generationMode === 'bin') {
-        return generateCardFromBIN(bin, 16, cvc, date) // Assuming 16 as default length
+        return generateCardFromBIN(bin, 16, cvc, date)
       } else {
         return generateCard(cardType, cvc, date)
       }
@@ -88,28 +89,34 @@ export default function CCGenerator() {
   const copyToClipboard = () => {
     navigator.clipboard.writeText(generatedCards.join('\n'))
     toast({
-      title: "Copied to clipboard",
-      description: "The generated card numbers have been copied to your clipboard.",
+      title: 'Copied to clipboard',
+      description: 'The generated card numbers have been copied to your clipboard.',
     })
   }
 
   const downloadCards = () => {
     let content = generatedCards.join('\n')
     if (format === 'CSV') {
-      content = 'Card Number,CVC,Expiry\n' + generatedCards.map(card => card.replace(/ /g, ',')).join('\n')
+      content = 'Card Number,CVC,Expiry\n' +
+        generatedCards.map((card) => card.replace(/ /g, ',')).join('\n')
     } else if (format === 'JSON') {
-      content = JSON.stringify(generatedCards.map(card => {
-        const [number, cvc, date] = card.split(' ')
-        return { number, cvc, date }
-      }), null, 2)
+      content = JSON.stringify(
+        generatedCards.map((card) => {
+          const [number, cvc, date] = card.split(' ')
+          return { number, cvc, date }
+        }),
+        null,
+        2
+      )
     } else if (format === 'XML') {
       content = '<?xml version="1.0" encoding="UTF-8"?>\n<cards>\n' +
-        generatedCards.map(card => {
+        generatedCards.map((card) => {
           const [number, cvc, date] = card.split(' ')
           return `  <card>\n    <number>${number}</number>${cvc ? `\n    <cvc>${cvc}</cvc>` : ''}${date ? `\n    <expiry>${date}</expiry>` : ''}\n  </card>`
         }).join('\n') +
         '\n</cards>'
     }
+
     const blob = new Blob([content], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -120,7 +127,7 @@ export default function CCGenerator() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
     toast({
-      title: "Cards downloaded",
+      title: 'Cards downloaded',
       description: `The generated card numbers have been downloaded in ${format} format.`,
     })
   }
@@ -136,7 +143,7 @@ export default function CCGenerator() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <Label htmlFor="generationMode" className="text-white">Generation Mode</Label>
-          <Select value={generationMode} onValueChange={(value: 'type' | 'bin') => setGenerationMode(value)}>
+          <Select value={generationMode} onValueChange={(value) => setGenerationMode(value as 'type' | 'bin')}>
             <SelectTrigger id="generationMode">
               <SelectValue />
             </SelectTrigger>
@@ -149,7 +156,7 @@ export default function CCGenerator() {
         {generationMode === 'type' ? (
           <div>
             <Label htmlFor="cardType" className="text-white">Card Type</Label>
-            <Select value={cardType} onValueChange={(value: keyof typeof CARD_TYPES) => setCardType(value)}>
+            <Select value={cardType} onValueChange={(value) => setCardType(value as keyof typeof CARD_TYPES)}>
               <SelectTrigger id="cardType">
                 <SelectValue />
               </SelectTrigger>
@@ -188,7 +195,7 @@ export default function CCGenerator() {
         </div>
         <div>
           <Label htmlFor="format" className="text-white">Format</Label>
-          <Select value={format} onValueChange={setFormat}>
+          <Select value={format} onValueChange={(value) => setFormat(value as 'CHECKER' | 'CSV' | 'JSON' | 'XML')}>
             <SelectTrigger id="format">
               <SelectValue />
             </SelectTrigger>
@@ -238,4 +245,3 @@ export default function CCGenerator() {
     </motion.div>
   )
 }
-
